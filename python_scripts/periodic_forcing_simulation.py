@@ -4,11 +4,13 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from pyrates.utility.grid_search import grid_search
 from pyrates.utility.visualization import plot_timeseries
+from pyrates.utility.data_analysis import welch
 
 """
 Allows to perform numerical simulations of a two population GPe model (arkypallidal and prototypical) 
 with periodic forcing and gamma-dstributed axonal delays and bi-exponential synapses. 
-Creates a time series plot and a plot of the GPe-intrinsic coupling strengths.
+Creates a time series plot, a plot of the GPe-intrinsic coupling strengths, and a plot with the power spectral density
+of the GPe dynamics.
 
 In the first section, the GPe and stimulation parameters can be customized to simulate the model behavior for different 
 dynamic regimes.
@@ -24,7 +26,7 @@ To run this code, you need Python >= 3.6 with PyRates (https://github.com/pyrate
 #######################
 
 dt = 1e-3    # initial integration step-size in ms
-dts = 1.0    # sampling step-size in ms
+dts = 0.1    # sampling step-size in ms
 T = 2050.0   # length of time integral in ms
 
 # periodic stimulation parameters
@@ -127,6 +129,18 @@ ax2.set(ylabel="", xlabel="")
 ax2.tick_params(axis='x', which='major', labelsize=9)
 sns.despine(left=True, bottom=True)
 ax2.set_title('GPe Coupling')
+plt.tight_layout()
+
+# power-spectral density profile of the simulated time series
+fig3, ax3 = plt.subplots(figsize=(6, 3))
+results = results * 1e3
+results.index = results.index * 1e-3
+psds, freqs = welch(results, fmin=1.0, fmax=100.0, tmin=1.0, n_fft=2048, n_overlap=1024)
+freq_results = pd.DataFrame(data=np.log(psds.T), index=freqs, columns=['r_i'])
+plot_timeseries(freq_results, ax=ax3)
+ax3.set_ylabel('log PSD')
+ax3.set_xlabel('frequency (Hz)')
+ax3.set_ylim([-15.0, 5.0])
 plt.tight_layout()
 
 plt.show()
