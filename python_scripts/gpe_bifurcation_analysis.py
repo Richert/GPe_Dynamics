@@ -20,7 +20,7 @@ auto_dir = path if type(path) is str and ".py" not in path else "~/PycharmProjec
 # config
 n_dim = 18
 n_params = 23
-a = PyAuto("auto_files", auto_dir=auto_dir)
+a = PyAuto("config_files", auto_dir=auto_dir)
 
 # choose for which GPe coupling patterns the analysis should be run
 ###################################################################

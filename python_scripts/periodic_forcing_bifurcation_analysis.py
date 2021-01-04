@@ -16,7 +16,7 @@ or change the default value of `auto_dir` below.
 # config
 n_dim = 20
 n_params = 25
-a = PyAuto("auto_files", auto_dir='~/PycharmProjects/auto-07p')
+a = PyAuto("config_files", auto_dir='~/PycharmProjects/auto-07p')
 store_params = ['PAR(23)', 'PAR(25)', 'PAR(14)']
 store_vars = ['U(2)', 'U(4)', 'U(19)', 'U(20)']
 
