@@ -25,9 +25,10 @@ To run this code, you need Python >= 3.6 with PyRates (https://github.com/pyrate
 # simulation parameters
 #######################
 
-dt = 1e-3    # initial integration step-size in ms
-dts = 0.1    # sampling step-size in ms
-T = 2050.0   # length of time integral in ms
+dt = 1e-3         # initial integration step-size in ms
+dts = 1.0         # sampling step-size in ms
+T = 11050.0       # length of time integral in ms
+cutoff = 1000.0   # initial condition washout period in ms
 
 # periodic stimulation parameters
 #################################
@@ -113,7 +114,7 @@ fig, ax = plt.subplots(figsize=(8, 4))
 plot_timeseries(results, ax=ax)
 ax.set_ylabel('GPe-p firing rate per ms')
 ax.set_xlabel('time (ms)')
-ax.set_xlim([1000.0, T-50.0])
+ax.set_xlim([cutoff, T-50.0])
 ax.set_ylim([0.01, 0.1])
 ax.tick_params(axis='both', which='major')
 plt.tight_layout()
@@ -135,7 +136,7 @@ plt.tight_layout()
 fig3, ax3 = plt.subplots(figsize=(6, 3))
 results = results * 1e3
 results.index = results.index * 1e-3
-psds, freqs = welch(results, fmin=1.0, fmax=100.0, tmin=1.0, n_fft=2048, n_overlap=1024)
+psds, freqs = welch(results, fmin=1.0, fmax=100.0, tmin=cutoff*1e-3, n_fft=2048, n_overlap=1024)
 freq_results = pd.DataFrame(data=np.log(psds.T), index=freqs, columns=['r_i'])
 plot_timeseries(freq_results, ax=ax3)
 ax3.set_ylabel('log PSD')
