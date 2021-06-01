@@ -1,11 +1,10 @@
-from pyrates.utility.pyauto import PyAuto, get_from_solutions
-import numpy as np
+from pyrates.utility.pyauto import PyAuto
 import matplotlib.pyplot as plt
 
 """
 Bifurcation analysis of the effect of periodic forcing on a two population GPe model (arkypallidal and prototypical) 
-with gamma-dstributed axonal delays and bi-exponential synapses. Creates the bifurcation diagram in Fig. 3 of
-(citation).
+with gamma-dstributed axonal delays and bi-exponential synapses. Creates the bifurcation diagram in Fig. 4 of
+Gast et al. (2021) JNS.
 
 To run this code, you need Python >= 3.6 with PyRates (https://github.com/pyrates-neuroscience/PyRates) and 
 auto-07p (https://github.com/auto-07p/auto-07p) installed.
@@ -13,127 +12,122 @@ You can pass your auto-07p installation path to the python command ('python gpe_
 or change the default value of `auto_dir` below.
 """
 
+#####################################
+# bifurcation analysis of qif model #
+#####################################
+
 # config
-n_dim = 20
-n_params = 25
+n_dim = 22
+n_params = 24
 a = PyAuto("config_files", auto_dir='~/PycharmProjects/auto-07p')
-store_params = ['PAR(23)', 'PAR(25)', 'PAR(14)']
-store_vars = ['U(2)', 'U(4)', 'U(19)', 'U(20)']
 
-############################
-# create initial condition #
-############################
+store_params = ['PAR(20)', 'PAR(21)', 'PAR(11)', 'PAR(14)']
+store_vars = ['U(2)', 'U(4)', 'U(21)', 'U(22)']
 
-# set base strength of GPe coupling (k_gp)
-s0_sols, s0_cont = a.run(e='gpe_2pop_forced', c='qif_lc', ICP=[19, 11], NPAR=n_params, name='k_gp',
-                         NDIM=n_dim, RL0=0.0, RL1=100.0, NMX=6000, DSMAX=0.5, UZR={19: [30.0]},
-                         STOP={'UZ1'}, variables=store_vars, params=store_params)
 
-# set GPe-p projection strength (k_p)
-s1_sols, s1_cont = a.run(starting_point='UZ1', ICP=[20, 11], NPAR=n_params, name='k_p',
-                         NDIM=n_dim, RL0=0.0, RL1=100.0, NMX=6000, DSMAX=0.5, UZR={20: [1.5]},
-                         STOP={'UZ1'}, variables=store_vars, params=store_params, origin=s0_cont)
+# induce oscillations
+#####################
 
-# set between vs. within population coupling strengths (k_i)
-s2_sols, s2_cont = a.run(starting_point='UZ1', c='qif_lc', ICP=[21, 11], NPAR=n_params, name='k_i',
-                         NDIM=n_dim, RL0=0.1, RL1=10.0, origin=s1_cont, NMX=6000, DSMAX=0.1, DS='-',
-                         UZR={21: [0.9]}, STOP={'UZ1'}, variables=store_vars, params=store_params)
+# step 1: continuation of k_pp
+s0_sols, s0_cont = a.run(e='gpe_2pop_forced', c='qif_lc', ICP=[6, 11], NPAR=n_params, name='k_pp:1',
+                         NDIM=n_dim, RL0=0.0, RL1=5.1, NMX=6000, DSMAX=0.1, STOP=['UZ1'], UZR={6: 5.0})
 
-# continuation of eta_p
-s3_sols, s3_cont = a.run(starting_point='UZ1', c='qif_lc', ICP=[2, 11], NPAR=n_params,
-                         name='c1:eta_p', NDIM=n_dim, RL0=-20.0, RL1=20.0, origin=s2_cont,
-                         NMX=6000, DSMAX=0.1, UZR={2: [4.8]}, STOP={'UZ1'}, variables=store_vars,
-                         params=store_params)
-
-# continuation of eta_a
-s4_sols, s4_cont = a.run(starting_point='UZ1', c='qif_lc', ICP=[3, 11], NPAR=n_params,
-                         name='c1:eta_a', NDIM=n_dim, RL0=-20.0, RL1=20.0, origin=s3_cont,
-                         NMX=6000, DSMAX=0.1, UZR={3: [-6.5]}, STOP={'UZ1'}, DS='-', variables=store_vars,
-                         params=store_params)
+# step 2: continuation of eta_p
+s1_sols, s1_cont = a.run(starting_point='UZ1', c='qif_lc', ICP=[2, 11], NPAR=n_params, name='eta_p:1',
+                         NDIM=n_dim, RL0=0.1, RL1=50.0, origin=s0_cont, NMX=6000, DSMAX=0.1,
+                         UZR={2: [40.0]}, STOP={'UZ1'}, variables=store_vars, params=store_params)
 
 starting_point = 'UZ1'
-starting_cont = s4_cont
+starting_cont = s1_cont
 
-###########################################################
-# analyze response of oscillating GPe to periodic forcing #
-###########################################################
+# continuation of driver
+########################
 
 # driver parameter boundaries
 alpha_min = 0.0
-alpha_max = 100.0
-omega_min = 25.0
-omega_max = 100.0
+alpha_max = 2.0
+omega_min = 50.0
+omega_max = 80.0
 
-# perform 1D parameter continuation of driver strength
-alpha_sols, alpha_cont = a.run(starting_point=starting_point, origin=starting_cont, c='qif_lc', ICP=[23, 11],
-                               NPAR=n_params, name='alpha', NDIM=n_dim, NMX=2000, DSMAX=0.05, RL0=alpha_min,
-                               RL1=alpha_max, STOP={}, UZR={23: [30.0]}, variables=store_vars, params=store_params)
+# step 1: codim 1 investigation of excitatory driver strength
+c0_sols, c0_cont = a.run(starting_point=starting_point, origin=starting_cont, c='qif_lc', ICP=[21, 11],
+                         NPAR=n_params, name='c1:alpha', NDIM=n_dim, NMX=2000, DSMAX=0.05, RL0=alpha_min,
+                         RL1=alpha_max, STOP={}, UZR={21: [1.45]}, variables=store_vars, params=store_params)
 
-# perform 1D parameter continuation of driver period
-omega_sols, omega_cont = a.run(starting_point='UZ1', origin=alpha_cont, c='qif_lc', ICP=[25, 11],
-                               NPAR=n_params, name='omega', NDIM=n_dim, NMX=8000, DSMAX=0.05, RL0=omega_min,
-                               RL1=omega_max, STOP={}, UZR={25: [77.3]}, bidirectional=True, variables=store_vars,
-                               params=store_params)
+# step 2: codim 1 investigation of of inhibitory driver strength
+c1_sols, c1_cont = a.run(starting_point='UZ1', origin=c0_cont, c='qif_lc', ICP=[23, 11], NPAR=n_params,
+                         name='c1:omega', NDIM=n_dim, NMX=8000, DSMAX=0.05, RL0=omega_min, RL1=omega_max, STOP={},
+                         UZR={23: [63.0, 64.0]}, bidirectional=True, variables=store_vars, params=store_params)
 
-# perform 2D investigation of torus bifurcations found in 1D continuations
+# step 3: codim 2 investigation of torus bifurcations found in step 1 and 2
 i, j = 0, 0
-for s in omega_sols.values():
+for s in c1_sols.values():
     if 'TR' in s['bifurcation']:
         i += 1
         p_tmp = f'TR{i}'
-        sols_tmp, cont_tmp = a.run(starting_point=p_tmp, origin=omega_cont, c='qif3', ICP=[25, 23, 11],
-                                   NPAR=n_params, name=f'{p_tmp}:omega/alpha', NDIM=n_dim, NMX=2000,
-                                   DSMAX=0.05, RL0=omega_min, RL1=omega_max, STOP={'BP1', 'R21', 'R11'}, UZR={},
-                                   bidirectional=True, variables=store_vars, params=store_params)
-        bfs = get_from_solutions(['bifurcation'], sols_tmp)
-        if "R2" in bfs:
-            s_tmp, c_tmp = a.run(starting_point='R21', origin=cont_tmp, c='qif_lc', ICP=[25, 11],
-                                 NPAR=n_params, name='c1:omega/R21', NDIM=n_dim, NMX=500, DSMAX=0.001,
-                                 RL0=omega_min, RL1=omega_max, STOP={'PD1', 'TR1'}, UZR={},
-                                 variables=store_vars, params=store_params, DS='-')
-            pds = get_from_solutions(['bifurcation'], s_tmp)
-            if "PD" in pds:
-                j += 1
-                p2_tmp = f'PD{j}'
-                s2_tmp, c2_tmp = a.run(starting_point=p2_tmp, origin=c_tmp, c='qif3', ICP=[25, 23, 11],
-                                       NPAR=n_params, name=f'{p_tmp}:omega/alpha:{p2_tmp}', NDIM=n_dim, NMX=2000,
-                                       DSMAX=0.05, RL0=omega_min, RL1=omega_max, STOP={'BP1', 'R22'}, UZR={},
-                                       bidirectional=True, variables=store_vars, params=store_params)
+        c2_sols, c2_cont = a.run(starting_point=p_tmp, origin=c1_cont, c='qif3', ICP=[23, 21, 11],
+                                 NPAR=n_params, name=f'c1:omega/alpha/{p_tmp}', NDIM=n_dim, NMX=2000,
+                                 DSMAX=0.05, RL0=omega_min, RL1=omega_max, STOP={'BP1'}, UZR={},
+                                 bidirectional=True, variables=store_vars, params=store_params)
+    elif 'PD' in s['bifurcation']:
+        j += 1
+        p_tmp = f'PD{j}'
+        c3_sols, c3_cont = a.run(starting_point=p_tmp, origin=c1_cont, c='qif3', ICP=[23, 21, 11],
+                                 NPAR=n_params, name=f'c1:omega/alpha/{p_tmp}', NDIM=n_dim, NMX=2000,
+                                 DSMAX=0.05, RL0=omega_min, RL1=omega_max, STOP={'BP1', 'R22'}, UZR={},
+                                 bidirectional=True, variables=store_vars, params=store_params)
 
-############
-# plotting #
-############
+# step 4: codim 1 investigation of of inhibitory driver strength for omega = 63.0
+c4_sols, c4_cont = a.run(starting_point='UZ1', origin=c1_cont, c='qif_lc', ICP=[21, 11], NPAR=n_params,
+                         name='c1:alpha:2', NDIM=n_dim, NMX=8000, DSMAX=0.05, RL0=alpha_min, RL1=alpha_max,
+                         STOP={}, UZR={}, bidirectional=True, variables=store_vars, params=store_params)
 
-fig, ax = plt.subplots(figsize=(8.0, 4.0))
+i += 1
+a.run(starting_point=f'TR1', origin=c4_cont, c='qif3', ICP=[23, 21, 11],
+      NPAR=n_params, name=f'c1:omega/alpha/TR{i}', NDIM=n_dim, NMX=2000,
+      DSMAX=0.05, RL0=omega_min, RL1=omega_max, STOP={'BP1'}, UZR={},
+      bidirectional=True, variables=store_vars, params=store_params)
+
+c5_sols, c5_cont = a.run(starting_point='UZ2', origin=c1_cont, c='qif_lc', ICP=[21, 11], NPAR=n_params,
+                         name='c1:alpha:3', NDIM=n_dim, NMX=8000, DSMAX=0.05, RL0=alpha_min, RL1=alpha_max,
+                         STOP={}, UZR={}, bidirectional=True, variables=store_vars, params=store_params)
+
+i += 1
+a.run(starting_point=f'LP1', origin=c5_cont, c='qif3', ICP=[23, 21, 11],
+      NPAR=n_params, name=f'c1:omega/alpha/TR{i}', NDIM=n_dim, NMX=2000,
+      DSMAX=0.05, RL0=omega_min, RL1=omega_max, STOP={'BP1'}, UZR={},
+      bidirectional=True, variables=store_vars, params=store_params)
+
+# plotting
+##########
+
+fig, ax = plt.subplots()
 
 # continuation of the torus bifurcation in alpha and omega
 i = 1
 while i < 11:
     try:
-        ax = a.plot_continuation('PAR(25)', 'PAR(23)', cont=f'TR{i}:omega/alpha', ax=ax, ignore=['UZ', 'BP'],
+        ax = a.plot_continuation('PAR(11)', 'PAR(21)', cont=f'c1:omega/alpha/TR{i}', ax=ax, ignore=['UZ', 'BP'],
                                  line_color_stable='#148F77', line_color_unstable='#148F77',
-                                 custom_bf_styles={'R1': {'marker': 'h', 'color': 'k'},
-                                                   'R2': {'marker': 'h', 'color': 'g'},
-                                                   'R3': {'marker': 'h', 'color': 'r'},
-                                                   'R4': {'marker': 'h', 'color': 'b'}},
+                                 custom_bf_styles={'R1': {'marker': 's', 'color': 'k'},
+                                                   'R2': {'marker': 'o', 'color': 'k'},
+                                                   'R3': {'marker': 'v', 'color': 'k'},
+                                                   'R4': {'marker': 'd', 'color': 'k'}},
                                  line_style_unstable='solid')
         i += 1
     except KeyError:
         i += 1
-    j = 1
-    while j < 11:
-        try:
-            ax = a.plot_continuation('PAR(25)', 'PAR(23)', cont=f'TR{i}:omega/alpha:PD{j}', ax=ax, ignore=['UZ', 'BP'],
-                                     line_color_stable='#3689c9', line_color_unstable='#3689c9',
-                                     line_style_unstable='solid')
-            j += 1
-        except KeyError:
-            j += 1
+i = 1
+while i < 11:
+    try:
+        ax = a.plot_continuation('PAR(11)', 'PAR(21)', cont=f'c1:omega/alpha/PD{i}', ax=ax, ignore=['UZ', 'BP'],
+                                 line_color_stable='#3689c9', line_color_unstable='#3689c9',
+                                 line_style_unstable='solid')
+        i += 1
+    except KeyError:
+        i += 1
 
 ax.set_ylabel(r'$\alpha$')
 ax.set_xlabel(r'$\omega$')
-ax.set_ylim([0.0, 60.0])
-ax.set_xlim([28.0, 91.5])
-
-plt.tight_layout()
+ax.set_title('2D bifurcation diagram')
 plt.show()
